@@ -7,7 +7,7 @@ interface LoginProps {
   onLoginSuccess: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
+const Login: React.FC<LoginProps> = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [form] = Form.useForm();
   const [isLoading, setIsLoading] = useState(false);
@@ -53,18 +53,18 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   };
 
   // Mock 用户数据库
-  const mockUserDatabase = [
-    {
-      email: 'user@example.com',
-      password: '123456',
-      username: 'demo_user'
-    },
-    {
-      email: 'test@qq.com',
-      password: '123456',
-      username: 'test_user'
-    }
-  ];
+  // const mockUserDatabase = [
+  //   {
+  //     email: 'user@example.com',
+  //     password: '123456',
+  //     username: 'demo_user'
+  //   },
+  //   {
+  //     email: 'test@qq.com',
+  //     password: '123456',
+  //     username: 'test_user'
+  //   }
+  // ];
 
  const mockAuthAPI = async (data: any, isLogin: boolean) => {
   return new Promise((resolve, reject) => {
