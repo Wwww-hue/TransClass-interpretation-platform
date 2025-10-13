@@ -2,7 +2,25 @@ import React, { useState } from 'react';
 import { Card, Form, Input, Button, Tabs, message, Spin,Alert } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import './Login.css';
+interface AuthData {
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword?: string;
+}
 
+interface User {
+  email: string;
+  password: string;
+  username: string;
+  role: string;
+}
+
+interface AuthResponse {
+  success: boolean;
+  token: string;
+  user: User;
+}
 interface LoginProps {
   onLoginSuccess: () => void;
 }
@@ -66,22 +84,21 @@ const Login: React.FC<LoginProps> = () => {
   //   }
   // ];
 
- const mockAuthAPI = async (data: any, isLogin: boolean) => {
+ const mockAuthAPI = async (data: AuthData, isLogin: boolean): Promise<AuthResponse> => {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
-      const validUsers = [
-
+      const validUsers: User[] = [
         {
           email: 'test@qq.com',
           password: '123456',
           username: '测试用户',
-          role: 'student'  // 学生端
+          role: 'student'
         },
         {
-          email: 'admin@example.com',  // 新增管理员账号
+          email: 'admin@example.com',
           password: 'admin123',
           username: '系统管理员',
-          role: 'admin'  // 管理员端
+          role: 'admin'
         }
       ];
 
@@ -117,43 +134,28 @@ const handleSubmit = async () => {
   setIsLoading(true);
 
   try {
-    console.log('🟡 调用mockAuthAPI');
+  const result: AuthResponse = await mockAuthAPI(
+    isLogin
+      ? { username: formData.email, email: formData.email, password: formData.password }
+      : {
+          username: formData.username,
+          email: formData.email,
+          password: formData.password
+        },
+    isLogin
+  );
 
-    const result: any = await mockAuthAPI(
-      isLogin
-        ? { email: formData.email, password: formData.password }
-        : {
-            username: formData.username,
-            email: formData.email,
-            password: formData.password
-          },
-      isLogin
-    );
+  console.log('✅ 认证成功，用户角色:', result.user.role);
 
-    console.log('✅ 认证成功，用户角色:', result.user.role);
+  // 保存用户信息
+  localStorage.setItem('auth_token', result.token);
+  localStorage.setItem('user_role', result.user.role);
+  localStorage.setItem('user_name', result.user.username);
 
-    // 保存用户信息
-    localStorage.setItem('auth_token', result.token);
-    localStorage.setItem('user_role', result.user.role);
-    localStorage.setItem('user_name', result.user.username);
-
-    message.success(isLogin ? '登录成功！' : '注册成功！');
-
-    // 🚀 根据角色跳转
-    if (result.user.role === 'admin') {
-      console.log('🔵 跳转到管理端');
-      window.location.href = '/admin';
-    } else {
-      console.log('🔵 跳转到首页');
-      window.location.href = '/';
-    }
-
-  } catch (err) {
-    console.log('❌ 认证失败:', err);
-    const errorMessage = err instanceof Error ? err.message : `${isLogin ? '登录' : '注册'}失败`;
-    showToast(errorMessage);
-    setIsLoading(false);
-  }
+} catch (error) {
+  console.error('认证失败:', error);
+  message.error((error as Error).message);
+}
 };
 
   const switchMode = () => {

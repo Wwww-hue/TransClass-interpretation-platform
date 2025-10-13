@@ -23,7 +23,7 @@ import {
   PlusOutlined,
   MinusCircleOutlined
 } from '@ant-design/icons';
-
+import type { UploadFile } from 'antd';
 const { Header, Sider, Content } = Layout;
 const { Option } = Select;
 const { TextArea } = Input;
@@ -55,8 +55,7 @@ const AdminDashboard: React.FC = () => {
   const [currentMenu, setCurrentMenu] = useState('upload');
   const [uploading, setUploading] = useState(false);
   const [form] = Form.useForm();
-  const [fileList, setFileList] = useState([]);
-
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
   // 模拟已上传的材料数据
   const [materials, setMaterials] = useState([
     {
@@ -85,8 +84,8 @@ const AdminDashboard: React.FC = () => {
       // 阻止自动上传
       return false;
     },
-    onChange: ({ fileList }) => {
-      setFileList(fileList);
+    onChange: (info:{ fileList:UploadFile[] }) => {
+      setFileList(info.fileList);
     },
     onRemove: () => {
       setFileList([]);
@@ -190,7 +189,7 @@ const onFinish = async (values: MaterialForm) => {
 
     } catch (error) {
       console.error('上传失败:', error);
-      message.error(error.message || '上传失败，请重试');
+      message.error((error as Error).message || '上传失败，请重试');
     } finally {
       setUploading(false);
     }
