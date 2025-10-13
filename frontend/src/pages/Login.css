@@ -1,0 +1,30 @@
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 420px;
+}
+
+/* 加载状态的样式 */
+.login-page .ant-spin {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  height: 200px; /* 给一个合适的高度 */
+}
+
+.login-page .ant-spin-dot {
+  font-size: 32px !important; /* 放大加载图标 */
+}
+
+.login-page .ant-spin-text {
+  margin-top: 16px;
+  font-size: 16px;
+}
