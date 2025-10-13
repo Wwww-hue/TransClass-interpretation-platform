@@ -442,8 +442,7 @@ const onFinish = async (values: MaterialForm) => {
                     >
                       <Select placeholder="选择语言">
                         <Option value="英语">英语</Option>
-                        <Option value="日语">日语</Option>
-                        <Option value="法语">法语</Option>
+                        <Option value="汉语">汉语</Option>
                       </Select>
                     </Form.Item>
                   </Col>
