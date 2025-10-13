@@ -14,8 +14,7 @@ import {
   Col,
   Select,
   InputNumber,
-  Divider,
-  Space
+  Space,
 } from 'antd';
 import {
   UploadOutlined,
@@ -24,7 +23,6 @@ import {
   PlusOutlined,
   MinusCircleOutlined
 } from '@ant-design/icons';
-import type { UploadProps } from 'antd';
 
 const { Header, Sider, Content } = Layout;
 const { Option } = Select;
@@ -83,7 +81,7 @@ const AdminDashboard: React.FC = () => {
 
 // 修改 Upload 组件
   const uploadProps = {
-    beforeUpload: (file) => {
+    beforeUpload: () => {
       // 阻止自动上传
       return false;
     },
@@ -237,7 +235,7 @@ const onFinish = async (values: MaterialForm) => {
     {
       title: '操作',
       key: 'action',
-      render: (_, record) => (
+      render: () => (
         <div>
           <Button type="link" size="small">编辑</Button>
           <Button type="link" size="small" danger>删除</Button>
@@ -307,7 +305,7 @@ const onFinish = async (values: MaterialForm) => {
 >
   <Upload
     {...uploadProps}
-    beforeUpload={(file) => {
+    beforeUpload={() => {
       // 阻止自动上传
       return false;
     }}
