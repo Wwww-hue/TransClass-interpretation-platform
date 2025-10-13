@@ -1953,3 +1953,32 @@
 2025-10-13 12:30:09 | INFO     | __main__:main:212 - 🐛 调试模式: 关闭
 2025-10-13 12:30:09 | INFO     | __main__:main:213 - 🔄 自动重载: 关闭
 2025-10-13 12:30:09 | INFO     | __main__:main:214 - ============================================================
+2025-10-13 14:29:54 | INFO     | __main__:check_environment:132 - ==================================================
+2025-10-13 14:29:54 | INFO     | __main__:check_environment:133 - 开始环境检查
+2025-10-13 14:29:54 | INFO     | __main__:check_environment:134 - ==================================================
+2025-10-13 14:29:54 | INFO     | __main__:debug_config_loading:50 - 🔍 开始调试配置加载...
+2025-10-13 14:29:54 | INFO     | __main__:debug_config_loading:54 - 环境变量 MYSQL_DATABASE: interpretation-platform
+2025-10-13 14:29:54 | INFO     | __main__:debug_config_loading:59 - ✅ 成功导入 app.config.settings
+2025-10-13 14:29:54 | INFO     | __main__:debug_config_loading:60 - 配置中的 mysql_database: 'interpretation-platform'
+2025-10-13 14:29:54 | INFO     | __main__:debug_config_loading:61 - 配置中的 mysql_host: localhost
+2025-10-13 14:29:54 | INFO     | __main__:debug_config_loading:62 - 配置中的 mysql_port: 3306
+2025-10-13 14:29:54 | INFO     | __main__:debug_config_loading:63 - 配置中的 mysql_username: root
+2025-10-13 14:29:54 | INFO     | __main__:debug_config_loading:66 - 生成的 database_url: mysql+pymysql://root:123456@localhost:3306/interpretation-platform?charset=utf8mb4
+2025-10-13 14:29:54 | INFO     | __main__:check_environment:142 - 📁 检查目录...
+2025-10-13 14:29:54 | INFO     | __main__:check_environment:146 - ✅ 目录检查完成
+2025-10-13 14:29:54 | INFO     | __main__:check_database_connection:86 - 🔍 开始检查数据库连接...
+2025-10-13 14:29:55 | INFO     | __main__:check_database_connection:92 - 尝试连接URL: mysql+pymysql://root:123456@localhost:3306/interpretation-platform?charset=utf8mb4
+2025-10-13 14:29:55 | INFO     | __main__:check_database_connection:100 - ✅ MySQL数据库连接正常
+2025-10-13 14:29:55 | INFO     | __main__:check_environment:157 - 📊 检查数据库表...
+2025-10-13 14:29:55 | INFO     | __main__:check_environment:168 - ✅ 表 practice_materials 存在
+2025-10-13 14:29:55 | INFO     | __main__:check_environment:168 - ✅ 表 study_records 存在
+2025-10-13 14:29:55 | INFO     | __main__:check_environment:168 - ✅ 表 daily_sentences 存在
+2025-10-13 14:29:55 | INFO     | __main__:check_environment:182 - ✅ 环境检查完成
+2025-10-13 14:29:55 | INFO     | __main__:main:207 - ============================================================
+2025-10-13 14:29:55 | INFO     | __main__:main:208 - 🎯 启动口译学习平台服务
+2025-10-13 14:29:55 | INFO     | __main__:main:209 - ============================================================
+2025-10-13 14:29:55 | INFO     | __main__:main:210 - 📝 服务地址: http://0.0.0.0:8001
+2025-10-13 14:29:55 | INFO     | __main__:main:211 - 📚 API文档: http://0.0.0.0:8001/docs
+2025-10-13 14:29:55 | INFO     | __main__:main:212 - 🐛 调试模式: 关闭
+2025-10-13 14:29:55 | INFO     | __main__:main:213 - 🔄 自动重载: 关闭
+2025-10-13 14:29:55 | INFO     | __main__:main:214 - ============================================================
