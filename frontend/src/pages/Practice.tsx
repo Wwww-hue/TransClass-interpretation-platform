@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Input, List, Button, Tag, Select, Slider, Rate, message } from 'antd';
 import { SearchOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-const API_BASE_URL = '/api';
 interface FilterParams {
   theme?: string;
   type?: string;

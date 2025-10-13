@@ -32,7 +32,6 @@ interface PracticeMaterial {
   created_at: string;
   updated_at: string;
 }
-
 // 学习进度接口
 interface StudyRecordProgress {
   material_id: number;
@@ -60,7 +59,7 @@ const MaterialDetail: React.FC = () => {
 
   // 统一的进度跟踪 ref
   const currentProgressRef = useRef(0);
-  const sessionStartTimeRef = useRef<number>(0);
+
   const lastSaveTimeRef = useRef<number>(0);
   const totalPlayTimeRef = useRef(0);
   const isDraggingRef = useRef(false);
@@ -87,7 +86,7 @@ const handleBack = () => {
   const getAudioUrl = (contentUrl: string | undefined) => {
     if (!contentUrl) return '';
     if (contentUrl.startsWith('http')) return contentUrl;
-    if (contentUrl.startsWith('/')) return `http://localhost:8001${contentUrl}`;
+    if (contentUrl.startsWith('/')) return `${import.meta.env.VITE_API_URL.replace('/api', '')}${contentUrl}`;
     return contentUrl;
   };
 

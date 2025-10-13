@@ -53,7 +53,6 @@ interface MaterialForm {
   translation: string;
   terms: Term[];
 }
-
 const AdminDashboard: React.FC = () => {
   const [currentMenu, setCurrentMenu] = useState('upload');
   const [uploading, setUploading] = useState(false);
