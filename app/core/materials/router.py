@@ -84,7 +84,7 @@ async def save_upload_file_to_github(file: UploadFile, file_content: bytes) -> s
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         original_name = file.filename
         filename = f"{timestamp}_{original_name}"
-        github_path = f"{GITHUB_STATIC_PATH}/{filename}"
+        github_path = f"static/materials/{filename}"
 
         # 获取 GitHub 客户端
         g = get_github_client()
@@ -99,21 +99,18 @@ async def save_upload_file_to_github(file: UploadFile, file_content: bytes) -> s
             path=github_path,
             message=commit_message,
             content=file_content_b64,
-            branch="master"  # 根据你的仓库分支调整
+            branch="master"  # 你的分支是 master
         )
 
-        # 构建原始文件访问 URL
-        raw_url = f"https://raw.githubusercontent.com/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}/master/{github_path}"
+        # 使用 GitHub Pages URL 而不是 Raw URL
+        pages_url = f"https://{GITHUB_REPO_OWNER}.github.io/{GITHUB_REPO_NAME}/static/materials/{filename}"
 
-        # 同时保存本地备份（可选）
-        ensure_upload_dir()
-        local_path = os.path.join(UPLOAD_DIR, filename)
-        with open(local_path, "wb") as buffer:
-            buffer.write(file_content)
+        print(f"✅ 文件上传成功，Pages URL: {pages_url}")
 
-        return raw_url
+        return pages_url
 
     except Exception as e:
+        print(f"❌ GitHub 上传失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"上传文件到 GitHub 失败: {str(e)}")
 
 
