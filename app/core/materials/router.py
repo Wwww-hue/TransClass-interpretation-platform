@@ -7,23 +7,26 @@ from app.database import get_db
 from app.core.materials.models import PracticeMaterial
 from app.core.materials.schemas import PracticeMaterialResponse, MaterialFilter
 from sqlalchemy import func
+import base64
 import os
-import shutil
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime, timedelta
 import json
+from github import Github, InputFileContent
 from app.database import get_db
 from app.core.materials.models import PracticeMaterial
 from app.core.materials.schemas import PracticeMaterialResponse, PracticeMaterialCreate
 from sqlalchemy import func
 from datetime import datetime, timezone, timedelta
 router = APIRouter(prefix="/api/materials", tags=["materials"])
-
-# 配置文件上传设置
-UPLOAD_DIR = "static/materials"  # 修改这里
+UPLOAD_DIR = "static/materials"
+MAX_FILE_SIZE = 100 * 1024 * 1024
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_REPO_OWNER = os.getenv("GITHUB_REPO_OWNER")
+GITHUB_REPO_NAME = os.getenv("GITHUB_REPO_NAME")
+GITHUB_STATIC_PATH=os.getenv("GITHUB_STATIC_PATH")
 ALLOWED_EXTENSIONS = {
     'audio/mpeg': 'mp3',
     'audio/wav': 'wav',
@@ -33,19 +36,69 @@ ALLOWED_EXTENSIONS = {
     'video/quicktime': 'mov',
     'video/x-msvideo': 'avi'
 }
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+# 初始化 GitHub 客户端
+def get_github_client():
+    """获取 GitHub 客户端"""
+    try:
+        return Github(GITHUB_TOKEN)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"GitHub 客户端初始化失败: {str(e)}")
+
 
 def ensure_upload_dir():
-    """确保上传目录存在"""
+    """确保上传目录存在（用于本地备份）"""
     os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 
 def allowed_file(file: UploadFile) -> bool:
     """检查文件类型是否允许"""
     return file.content_type in ALLOWED_EXTENSIONS
 
+
 def get_file_extension(file: UploadFile) -> str:
     """获取文件扩展名"""
     return ALLOWED_EXTENSIONS.get(file.content_type, 'bin')
+
+
+async def save_upload_file_to_github(file: UploadFile, file_content: bytes) -> str:
+    """保存上传的文件到 GitHub 仓库并返回访问 URL"""
+    try:
+        # 生成唯一文件名
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        original_name = file.filename
+        filename = f"{timestamp}_{original_name}"
+        github_path = f"{GITHUB_STATIC_PATH}/{filename}"
+
+        # 获取 GitHub 客户端
+        g = get_github_client()
+        repo = g.get_repo(f"{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}")
+
+        # 将文件内容编码为 base64
+        file_content_b64 = base64.b64encode(file_content).decode('utf-8')
+
+        # 上传文件到 GitHub
+        commit_message = f"Add audio file: {filename}"
+        repo.create_file(
+            path=github_path,
+            message=commit_message,
+            content=file_content_b64,
+            branch="main"  # 根据你的仓库分支调整
+        )
+
+        # 构建原始文件访问 URL
+        raw_url = f"https://raw.githubusercontent.com/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}/main/{github_path}"
+
+        # 同时保存本地备份（可选）
+        ensure_upload_dir()
+        local_path = os.path.join(UPLOAD_DIR, filename)
+        with open(local_path, "wb") as buffer:
+            buffer.write(file_content)
+
+        return raw_url
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"上传文件到 GitHub 失败: {str(e)}")
+
 
 @router.post("/", response_model=PracticeMaterialResponse)
 async def create_material(
@@ -65,7 +118,7 @@ async def create_material(
         transcript: str = Form(...),
         translation: str = Form(...),
         terms: Optional[str] = Form(None),
-        file: Optional[UploadFile] = File(None),  # 这里是关键！
+        file: Optional[UploadFile] = File(None),
         db: Session = Depends(get_db)
 ):
     """上传新的学习材料"""
@@ -89,10 +142,8 @@ async def create_material(
                     detail=f"不支持的文件类型。允许的类型: {allowed_types}"
                 )
 
-            # 保存文件
-            content_url = await save_upload_file(file, file_content)
-            # 重置文件指针，以便后续使用
-            await file.seek(0)
+            # 保存文件到 GitHub
+            content_url = await save_upload_file_to_github(file, file_content)
 
         # 解析技能列表和术语表
         try:
@@ -123,9 +174,9 @@ async def create_material(
             "transcript": transcript,
             "translation": translation,
             "terms": terms_list,
-            "content_url": content_url,
+            "content_url": content_url,  # 现在这是 GitHub 的原始文件 URL
             "is_active": True,
-            "created_at": datetime.now(timezone(timedelta(hours=8))),  # 北京时间
+            "created_at": datetime.now(timezone(timedelta(hours=8))),
             "updated_at": datetime.now(timezone(timedelta(hours=8))),
         }
 
@@ -142,25 +193,6 @@ async def create_material(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"上传材料失败: {str(e)}")
-
-
-async def save_upload_file(file: UploadFile, file_content: bytes) -> str:
-    """保存上传的文件并返回相对路径"""
-    ensure_upload_dir()
-
-    # 生成唯一文件名
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    extension = ALLOWED_EXTENSIONS.get(file.content_type, 'bin')
-    # 保留原始文件扩展名
-    original_name = file.filename
-    filename = f"{timestamp}_{original_name}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
-
-    # 保存文件
-    with open(file_path, "wb") as buffer:
-        buffer.write(file_content)
-
-    return f"/static/materials/{filename}"
 
 @router.get("/", response_model=List[PracticeMaterialResponse])
 def get_materials(
@@ -308,3 +340,5 @@ def get_random_practice_type_material(practice_type: str, db: Session = Depends(
         raise HTTPException(status_code=404, detail="该类型暂无可用材料")
 
     return material
+
+
