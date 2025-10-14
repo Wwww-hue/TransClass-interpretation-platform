@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, Form, Input, Button, Tabs, message, Spin,Alert } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import './Login.css';
+import { useNavigate } from 'react-router-dom';
 interface AuthData {
   username: string;
   email: string;
@@ -26,6 +27,7 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = () => {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [form] = Form.useForm();
   const [isLoading, setIsLoading] = useState(false);
@@ -134,28 +136,37 @@ const handleSubmit = async () => {
   setIsLoading(true);
 
   try {
-  const result: AuthResponse = await mockAuthAPI(
-    isLogin
-      ? { username: formData.email, email: formData.email, password: formData.password }
-      : {
-          username: formData.username,
-          email: formData.email,
-          password: formData.password
-        },
-    isLogin
-  );
+    const result: AuthResponse = await mockAuthAPI(
+      isLogin
+        ? { username: formData.email, email: formData.email, password: formData.password }
+        : {
+            username: formData.username,
+            email: formData.email,
+            password: formData.password
+          },
+      isLogin
+    );
 
-  console.log('✅ 认证成功，用户角色:', result.user.role);
+    console.log('✅ 认证成功，用户角色:', result.user.role);
 
-  // 保存用户信息
-  localStorage.setItem('auth_token', result.token);
-  localStorage.setItem('user_role', result.user.role);
-  localStorage.setItem('user_name', result.user.username);
+    // 保存用户信息
+    localStorage.setItem('auth_token', result.token);
+    localStorage.setItem('user_role', result.user.role);
+    localStorage.setItem('user_name', result.user.username);
 
-} catch (error) {
-  console.error('认证失败:', error);
-  message.error((error as Error).message);
-}
+    // 🎯 添加跳转逻辑
+    if (result.user.role === 'admin') {
+      navigate('/admin');
+    } else {
+      navigate('/student');
+    }
+
+  } catch (error) {
+    console.error('认证失败:', error);
+    message.error((error as Error).message);
+  } finally {
+    setIsLoading(false);
+  }
 };
 
   const switchMode = () => {
