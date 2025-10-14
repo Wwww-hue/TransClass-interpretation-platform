@@ -28,5 +28,5 @@ settings = Settings()
 settings.database_url = (
     f"mysql+pymysql://{settings.mysql_username}:{settings.mysql_password}"
     f"@{settings.mysql_host}:{settings.mysql_port}/{settings.mysql_database}"
-    f"?charset={settings.mysql_charset}"
+    f"?charset={settings.mysql_charset}&time_zone=+8:00"  # 🎯 添加时区参数
 )

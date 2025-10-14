@@ -8,6 +8,7 @@ from app.core.study_records.models import StudyRecord
 from app.core.study_records.schemas import StudyRecordResponse, StudyRecordCreate, UserStats
 from app.core.materials.models import PracticeMaterial
 from .schemas import StudyRecordResponse, StudyRecordCreate, PracticeMaterialBase,StudyRecordProgress
+from datetime import timedelta
 router = APIRouter(prefix="/api/study-records", tags=["study-records"])
 
 # 硬编码用户ID
@@ -37,7 +38,7 @@ def create_study_record(record: StudyRecordCreate, db: Session = Depends(get_db)
         StudyRecord.material_id == record.material_id
     ).first()
 
-    current_time = datetime.now()
+    current_time = datetime.now(timezone(timedelta(hours=8)))
 
     if study_record:
         # 使用前端传递的实际播放时长（秒）
