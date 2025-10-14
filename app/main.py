@@ -21,7 +21,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://trans-class-interpretation-platform-ux2p-7fo2lbmg0.vercel.app",
+        "https://trans-class-interpretation-platform-ux2p-*.vercel.app",
         "https://trans-class-interpretation-platform-two.vercel.app",
         "http://localhost:3000",
         "http://localhost:5173"
