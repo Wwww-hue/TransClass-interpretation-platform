@@ -69,7 +69,7 @@ useEffect(() => {
     const loadRecentMaterials = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_BASE_URL}/api/materials/recent/updates`);
+        const response = await fetch(`${API_BASE_URL}/materials/recent/updates`);
 
         if (!response.ok) {
           throw new Error(`HTTP错误: ${response.status}`);
@@ -93,7 +93,7 @@ useEffect(() => {
     const loadStudyRecords = async () => {
       try {
         setRecordsLoading(true);
-        const response = await fetch(`${API_BASE_URL}/api/study-records/`);
+        const response = await fetch(`${API_BASE_URL}/study-records/`);
 
         if (!response.ok) {
           throw new Error(`HTTP错误: ${response.status}`);
@@ -130,7 +130,7 @@ useEffect(() => {
     const loadUserStats = async () => {
       try {
         setStatsLoading(true);
-        const response = await fetch(`${API_BASE_URL}/api/study-records/user-stats`);
+        const response = await fetch(`${API_BASE_URL}/study-records/user-stats`);
 
         if (!response.ok) {
           throw new Error(`HTTP错误: ${response.status}`);
@@ -168,7 +168,7 @@ useEffect(() => {
     const loadDailySentence = async () => {
       try {
         setSentenceLoading(true);
-        const response = await fetch(`${API_BASE_URL}/api/daily-sentence/`);
+        const response = await fetch(`${API_BASE_URL}/daily-sentence/`);
 
         if (!response.ok) {
           throw new Error(`HTTP错误: ${response.status}`);
@@ -246,7 +246,7 @@ useEffect(() => {
   const handleCardClick = async (practiceType: string) => {
     try {
       sessionStorage.setItem('fromHome', 'true');
-      const response = await fetch(`${API_BASE_URL}/api/materials/practice-type/${practiceType}`);
+      const response = await fetch(`${API_BASE_URL}/materials/practice-type/${practiceType}`);
 
       if (response.status === 404) {
         message.error(`暂无${getPracticeTypeName(practiceType)}练习材料`);
