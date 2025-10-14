@@ -160,7 +160,7 @@ const handleSubmit = async () => {
     } else {
       navigate('/');
     }
-
+window.location.reload();
   } catch (error) {
     console.error('认证失败:', error);
     message.error((error as Error).message);
