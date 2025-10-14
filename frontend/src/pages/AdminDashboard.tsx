@@ -24,6 +24,8 @@ import {
   MinusCircleOutlined
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
+import{  useEffect } from 'react'; // 添加 useEffect
+import { useNavigate } from 'react-router-dom'; // 添加这行
 const { Header, Sider, Content } = Layout;
 const { Option } = Select;
 const { TextArea } = Input;
@@ -52,10 +54,27 @@ interface MaterialForm {
   terms: Term[];
 }
 const AdminDashboard: React.FC = () => {
+  const navigate = useNavigate(); // 添加这行
   const [currentMenu, setCurrentMenu] = useState('upload');
   const [uploading, setUploading] = useState(false);
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    const userRole = localStorage.getItem('user_role');
+
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    if (userRole !== 'admin') {
+      message.error('无权访问管理后台');
+      navigate('/');
+      return;
+    }
+  }, [navigate]);
+
   // 模拟已上传的材料数据
   const [materials, setMaterials] = useState([
     {

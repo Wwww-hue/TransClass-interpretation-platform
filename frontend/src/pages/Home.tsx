@@ -57,7 +57,13 @@ const Home: React.FC = () => {
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [statsLoading, setStatsLoading] = useState(false);
   const [sentenceLoading, setSentenceLoading] = useState(false); // 新增：每日一句加载状态
-
+useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+  }, [navigate]);
   // 加载最近更新的材料
   useEffect(() => {
     const loadRecentMaterials = async () => {

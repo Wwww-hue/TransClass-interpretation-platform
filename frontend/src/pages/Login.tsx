@@ -22,11 +22,9 @@ interface AuthResponse {
   token: string;
   user: User;
 }
-interface LoginProps {
-  onLoginSuccess: () => void;
-}
 
-const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
+
+const Login: React.FC= () => {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [form] = Form.useForm();
@@ -160,7 +158,7 @@ const handleSubmit = async () => {
     } else {
       navigate('/');
     }
-onLoginSuccess();
+
   } catch (error) {
     console.error('认证失败:', error);
     message.error((error as Error).message);
