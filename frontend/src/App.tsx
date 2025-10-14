@@ -13,7 +13,7 @@ const App: React.FC = () => {
   const token = localStorage.getItem('auth_token');
 
   if (!token) {
-    return <Login onLoginSuccess={() => {}} />;
+    return <Login onLoginSuccess={() => window.location.reload()} />;  
   }
 
   return (
