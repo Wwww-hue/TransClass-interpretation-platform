@@ -29,7 +29,7 @@ import { useNavigate } from 'react-router-dom'; // 添加这行
 const { Header, Sider, Content } = Layout;
 const { Option } = Select;
 const { TextArea } = Input;
-
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 interface Term {
   term: string;
   translation: string;
@@ -176,7 +176,7 @@ const onFinish = async (values: MaterialForm) => {
       }
 
       // 发送到后端API
-      const response = await fetch('/api/materials/', {
+      const response = await fetch(`${API_BASE_URL}/materials/`, {
         method: 'POST',
         body: formData,
       });
