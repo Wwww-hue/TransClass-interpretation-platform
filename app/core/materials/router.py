@@ -7,7 +7,8 @@ from app.database import get_db
 from app.core.materials.models import PracticeMaterial
 from app.core.materials.schemas import PracticeMaterialResponse, MaterialFilter
 from sqlalchemy import func
-import base64
+import cloudinary
+import cloudinary.uploader
 import os
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
@@ -21,28 +22,34 @@ from app.core.materials.schemas import PracticeMaterialResponse, PracticeMateria
 from sqlalchemy import func
 from datetime import datetime, timezone, timedelta
 router = APIRouter(prefix="/api/materials", tags=["materials"])
-UPLOAD_DIR = "static/materials"
-MAX_FILE_SIZE = 100 * 1024 * 1024
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-GITHUB_REPO_OWNER = os.getenv("GITHUB_REPO_OWNER")
-GITHUB_REPO_NAME = os.getenv("GITHUB_REPO_NAME")
-GITHUB_STATIC_PATH=os.getenv("GITHUB_STATIC_PATH")
-# 添加严格的验证
-if not GITHUB_TOKEN:
-    print("❌ GITHUB_TOKEN 未设置")
-    # 或者抛出异常
-    raise ValueError("GITHUB_TOKEN 环境变量未设置")
+# Cloudinary 配置
+CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")
+CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
+CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
 
-if not GITHUB_REPO_OWNER:
-    print("❌ GITHUB_REPO_OWNER 未设置")
-    raise ValueError("GITHUB_REPO_OWNER 环境变量未设置")
+# 初始化 Cloudinary 配置
+cloudinary.config(
+    cloud_name=CLOUDINARY_CLOUD_NAME,
+    api_key=CLOUDINARY_API_KEY,
+    api_secret=CLOUDINARY_API_SECRET
+)
 
-if not GITHUB_REPO_NAME:
-    print("❌ GITHUB_REPO_NAME 未设置")
-    raise ValueError("GITHUB_REPO_NAME 环境变量未设置")
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 
-print(f"✅ GitHub 配置: {GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}")
+# 添加 Cloudinary 配置验证
+if not CLOUDINARY_CLOUD_NAME:
+    print("❌ CLOUDINARY_CLOUD_NAME 未设置")
+    raise ValueError("CLOUDINARY_CLOUD_NAME 环境变量未设置")
 
+if not CLOUDINARY_API_KEY:
+    print("❌ CLOUDINARY_API_KEY 未设置")
+    raise ValueError("CLOUDINARY_API_KEY 环境变量未设置")
+
+if not CLOUDINARY_API_SECRET:
+    print("❌ CLOUDINARY_API_SECRET 未设置")
+    raise ValueError("CLOUDINARY_API_SECRET 环境变量未设置")
+
+print(f"✅ Cloudinary 配置: {CLOUDINARY_CLOUD_NAME}")
 
 ALLOWED_EXTENSIONS = {
     'audio/mpeg': 'mp3',
@@ -53,18 +60,6 @@ ALLOWED_EXTENSIONS = {
     'video/quicktime': 'mov',
     'video/x-msvideo': 'avi'
 }
-# 初始化 GitHub 客户端
-def get_github_client():
-    """获取 GitHub 客户端"""
-    try:
-        return Github(GITHUB_TOKEN)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"GitHub 客户端初始化失败: {str(e)}")
-
-
-def ensure_upload_dir():
-    """确保上传目录存在（用于本地备份）"""
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 def allowed_file(file: UploadFile) -> bool:
@@ -77,41 +72,32 @@ def get_file_extension(file: UploadFile) -> str:
     return ALLOWED_EXTENSIONS.get(file.content_type, 'bin')
 
 
-async def save_upload_file_to_github(file: UploadFile, file_content: bytes) -> str:
-    """保存上传的文件到 GitHub 仓库并返回访问 URL"""
+async def save_upload_file_to_cloudinary(file: UploadFile, file_content: bytes) -> str:
+    """保存上传的文件到 Cloudinary 并返回访问 URL"""
     try:
         # 生成唯一文件名
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         original_name = file.filename
         filename = f"{timestamp}_{original_name}"
-        github_path = f"static/materials/{filename}"
 
-        # 获取 GitHub 客户端
-        g = get_github_client()
-        repo = g.get_repo(f"{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}")
-
-        # 将文件内容编码为 base64
-        file_content_b64 = base64.b64encode(file_content).decode('utf-8')
-
-        # 上传文件到 GitHub
-        commit_message = f"Add audio file: {filename}"
-        repo.create_file(
-            path=github_path,
-            message=commit_message,
-            content=file_content_b64,
-            branch="master"  # 你的分支是 master
+        # 上传到 Cloudinary
+        result = cloudinary.uploader.upload(
+            file_content,
+            resource_type="auto",  # 自动检测音频/视频
+            folder="materials",  # 在 Cloudinary 中创建 materials 文件夹
+            public_id=filename,  # 使用生成的文件名
+            overwrite=False  # 不覆盖同名文件
         )
 
-        # 使用 GitHub Pages URL 而不是 Raw URL
-        pages_url = f"https://{GITHUB_REPO_OWNER}.github.io/{GITHUB_REPO_NAME}/static/materials/{filename}"
+        # 返回安全的 CDN URL
+        cdn_url = result["secure_url"]
+        print(f"✅ 文件上传到 Cloudinary 成功，CDN URL: {cdn_url}")
 
-        print(f"✅ 文件上传成功，Pages URL: {pages_url}")
-
-        return pages_url
+        return cdn_url
 
     except Exception as e:
-        print(f"❌ GitHub 上传失败: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"上传文件到 GitHub 失败: {str(e)}")
+        print(f"❌ Cloudinary 上传失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"上传文件到 Cloudinary 失败: {str(e)}")
 
 
 @router.post("/", response_model=PracticeMaterialResponse)
@@ -156,8 +142,8 @@ async def create_material(
                     detail=f"不支持的文件类型。允许的类型: {allowed_types}"
                 )
 
-            # 保存文件到 GitHub
-            content_url = await save_upload_file_to_github(file, file_content)
+            # 保存文件到 Cloudinary
+            content_url = await save_upload_file_to_cloudinary(file, file_content)
 
         # 解析技能列表和术语表
         try:
@@ -188,7 +174,7 @@ async def create_material(
             "transcript": transcript,
             "translation": translation,
             "terms": terms_list,
-            "content_url": content_url,  # 现在这是 GitHub 的原始文件 URL
+            "content_url": content_url,  # 现在这是 Cloudinary 的 CDN URL
             "is_active": True,
             "created_at": datetime.now(timezone(timedelta(hours=8))),
             "updated_at": datetime.now(timezone(timedelta(hours=8))),
