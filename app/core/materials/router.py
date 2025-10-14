@@ -27,6 +27,23 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_REPO_OWNER = os.getenv("GITHUB_REPO_OWNER")
 GITHUB_REPO_NAME = os.getenv("GITHUB_REPO_NAME")
 GITHUB_STATIC_PATH=os.getenv("GITHUB_STATIC_PATH")
+# 添加严格的验证
+if not GITHUB_TOKEN:
+    print("❌ GITHUB_TOKEN 未设置")
+    # 或者抛出异常
+    raise ValueError("GITHUB_TOKEN 环境变量未设置")
+
+if not GITHUB_REPO_OWNER:
+    print("❌ GITHUB_REPO_OWNER 未设置")
+    raise ValueError("GITHUB_REPO_OWNER 环境变量未设置")
+
+if not GITHUB_REPO_NAME:
+    print("❌ GITHUB_REPO_NAME 未设置")
+    raise ValueError("GITHUB_REPO_NAME 环境变量未设置")
+
+print(f"✅ GitHub 配置: {GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}")
+
+
 ALLOWED_EXTENSIONS = {
     'audio/mpeg': 'mp3',
     'audio/wav': 'wav',
