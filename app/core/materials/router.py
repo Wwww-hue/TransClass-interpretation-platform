@@ -86,7 +86,7 @@ async def save_upload_file_to_github(file: UploadFile, file_content: bytes) -> s
         )
 
         # 构建原始文件访问 URL
-        raw_url = f"https://raw.githubusercontent.com/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}/main/{github_path}"
+        raw_url = f"https://raw.githubusercontent.com/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}/master/{github_path}"
 
         # 同时保存本地备份（可选）
         ensure_upload_dir()
