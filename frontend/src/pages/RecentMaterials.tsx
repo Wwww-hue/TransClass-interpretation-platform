@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, List, Tag, Rate, Button, Row, Col, Input,  message } from 'antd';
 import { LeftOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-
+const API_BASE_URL = import.meta.env.VITE_API_URL
 const { Search } = Input;
 
 interface PracticeMaterial {
@@ -33,7 +33,7 @@ const RecentMaterials: React.FC = () => {
   const loadRecentMaterials = async (search?: string) => {
     try {
       setLoading(true);
-      let url = '/api/materials/recent/updates';
+      let url = `${API_BASE_URL}/materials/recent/updates`;
       if (search) {
         url += `?search=${encodeURIComponent(search)}`;
       }

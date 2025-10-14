@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Profile.css';
 import { useNavigate } from 'react-router-dom';
-
+const API_BASE_URL = import.meta.env.VITE_API_URL
 // 定义接口类型
 interface StudyRecord {
   id: number;
@@ -49,7 +49,7 @@ const Profile: React.FC = () => {
     const loadStudyRecords = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/study-records/');
+        const response = await fetch(`${API_BASE_URL}/study-records/`);
 
         if (!response.ok) {
           throw new Error(`HTTP错误: ${response.status}`);
@@ -73,7 +73,7 @@ const Profile: React.FC = () => {
     const loadUserStats = async () => {
       try {
         setStatsLoading(true);
-        const response = await fetch('/api/study-records/user-stats');
+        const response = await fetch(`${API_BASE_URL}/study-records/user-stats`);
 
         if (!response.ok) {
           throw new Error(`HTTP错误: ${response.status}`);

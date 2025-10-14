@@ -3,6 +3,7 @@ import { Card, Form, Input, Button, Tabs, message, Spin,Alert } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import './Login.css';
 import { useNavigate } from 'react-router-dom';
+
 interface AuthData {
   username: string;
   email: string;

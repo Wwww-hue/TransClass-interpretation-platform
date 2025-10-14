@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Card, Row, Col, Button, Tabs, Tag, Rate, message, Spin } from 'antd';
 import { PlayCircleOutlined, PauseCircleOutlined, LeftOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-
+const API_BASE_URL = import.meta.env.VITE_API_URL
 // 定义接口类型
 interface Term {
   term: string;
@@ -115,7 +115,7 @@ const handleBack = () => {
     try {
       console.log(`💾 保存进度: ${progressVal}%, 播放时长: ${playDuration}秒`);
 
-      const response = await fetch('/api/study-records/', {
+      const response = await fetch(`${API_BASE_URL}/study-records/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -140,7 +140,7 @@ const handleBack = () => {
   // 加载学习进度
   const loadStudyProgress = async (materialId: number) => {
     try {
-      const response = await fetch(`/api/study-records/material/${materialId}/progress`);
+      const response = await fetch(`${API_BASE_URL}/study-records/material/${materialId}/progress`);
 
       if (response.ok) {
         const progressData: StudyRecordProgress = await response.json();
@@ -171,7 +171,7 @@ const handleBack = () => {
         setUserProgress(savedProgress);
         currentProgressRef.current = savedProgress;
 
-        const response = await fetch(`/api/materials/${id}`);
+        const response = await fetch(`${API_BASE_URL}/materials/${id}`);
         if (!response.ok) throw new Error(`HTTP错误: ${response.status}`);
         const data = await response.json();
         setMaterialData(data);

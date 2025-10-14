@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Input, List, Button, Tag, Select, Slider, Rate, message } from 'antd';
 import { SearchOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+const API_BASE_URL = import.meta.env.VITE_API_URL
 interface FilterParams {
   theme?: string;
   type?: string;
@@ -81,7 +82,7 @@ const loadMaterials = async (filters: FilterParams = {}) => {
       }
     });
 
-    const url = `/api/materials/?${params}`;
+    const url = `${API_BASE_URL}/materials/?${params}`;
     const response = await fetch(url);
 
     if (!response.ok) {
@@ -97,7 +98,7 @@ const loadMaterials = async (filters: FilterParams = {}) => {
     let data;
     try {
       data = JSON.parse(responseText);
-    } catch (parseError) {
+    } catch  {
       throw new Error('数据格式错误');
     }
 
@@ -107,7 +108,7 @@ const loadMaterials = async (filters: FilterParams = {}) => {
       setPracticeMaterials([]);
     }
 
-  } catch (error) {
+  } catch {
     message.error('加载材料失败');
     setPracticeMaterials([]);
   } finally {
@@ -119,8 +120,9 @@ const loadMaterials = async (filters: FilterParams = {}) => {
 useEffect(() => {
   loadMaterials();
 }, []);
+type FilterValue = string | number | boolean | string[] | number[];
 
-  const handleFilterChange = (key: string, value: any) => {
+  const handleFilterChange = (key: string, value: FilterValue) => {
     setSelectedFilters(prev => ({
       ...prev,
       [key]: value
