@@ -1,22 +1,3 @@
-// // vite.config.js
-// import { defineConfig } from 'vite'
-// import react from '@vitejs/plugin-react'
-//
-// export default defineConfig({
-//   plugins: [react()],
-//   server: {
-//     proxy: {
-//       '/api': {
-//         target: 'http://localhost:8001',
-//         changeOrigin: true,
-//         secure: false,
-//         // 确保不重写路径
-//         rewrite: (path) => path
-//       }
-//     }
-//   }
-// })
-// vite.config.js
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -24,5 +5,9 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist'
+  },
+  // 添加这个 SPA 回退配置
+  server: {
+    historyApiFallback: true
   }
 })
