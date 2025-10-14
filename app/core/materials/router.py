@@ -82,7 +82,7 @@ async def save_upload_file_to_github(file: UploadFile, file_content: bytes) -> s
             path=github_path,
             message=commit_message,
             content=file_content_b64,
-            branch="main"  # 根据你的仓库分支调整
+            branch="master"  # 根据你的仓库分支调整
         )
 
         # 构建原始文件访问 URL
