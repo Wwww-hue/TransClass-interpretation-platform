@@ -1,12 +1,4 @@
 # app/core/materials/router.py
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from typing import List, Optional
-from datetime import datetime, timedelta
-from app.database import get_db
-from app.core.materials.models import PracticeMaterial
-from app.core.materials.schemas import PracticeMaterialResponse, MaterialFilter
-from sqlalchemy import func
 import cloudinary
 import cloudinary.uploader
 import os
@@ -15,7 +7,6 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import json
-from github import Github, InputFileContent
 from app.database import get_db
 from app.core.materials.models import PracticeMaterial
 from app.core.materials.schemas import PracticeMaterialResponse, PracticeMaterialCreate
