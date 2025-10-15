@@ -194,32 +194,32 @@ const handleBack = () => {
   }, [id]);
 
   // 播放定时器 - 这是唯一的进度跟踪来源
-// 替换原来的定时器效果
 useEffect(() => {
-  if (isPlaying && materialData && !isDraggingRef.current) {
+  if (isPlaying && materialData && !isDraggingRef.current) { // ✅ 已经有这个检查了
     const totalSeconds = durationToSeconds(materialData.duration);
     const startTime = Date.now();
-    const startCurrentTime = currentTimeRef.current; // ✅ 拿最新时间
+    const startCurrentTime = currentTimeRef.current;
 
     lastUpdateTimeRef.current = startTime;
 
-
     timerRef.current = window.setInterval(() => {
+      // ✅ 关键：如果正在拖动，跳过本次更新
+      if (isDraggingRef.current) {
+        return;
+      }
+
       const now = Date.now();
-      const elapsedSeconds = Math.floor((now - startTime) / 1000); // 精确计算经过的秒数
+      const elapsedSeconds = Math.floor((now - startTime) / 1000);
 
       setCurrentTime(() => {
-        // 基于实际经过的时间计算新时间，而不是简单的 prev + 1
         const newTime = Math.min(startCurrentTime + elapsedSeconds, totalSeconds);
 
-        // 如果超过总时长，停止播放
         if (newTime >= totalSeconds) {
           setIsPlaying(false);
           if (audioRef.current) {
             audioRef.current.pause();
           }
 
-          // 播放完成，保存 100%
           const finalDuration = totalPlayTimeRef.current;
           totalPlayTimeRef.current = 0;
           saveStudyProgress(100, finalDuration);
@@ -230,20 +230,17 @@ useEffect(() => {
           return totalSeconds;
         }
 
-        // 计算新进度
         const newProgress = calculateProgress(newTime, totalSeconds);
         setProgress(newProgress);
         currentProgressRef.current = newProgress;
-        currentTimeRef.current = newTime; // ✅ 同步到 ref
+        currentTimeRef.current = newTime;
 
-        // 累计播放时长 - 基于实际时间差
         const timeSinceLastUpdate = Math.floor((now - lastUpdateTimeRef.current) / 1000);
-if (timeSinceLastUpdate > 0) {
-  totalPlayTimeRef.current += timeSinceLastUpdate;
-  lastUpdateTimeRef.current = now;
-}
+        if (timeSinceLastUpdate > 0) {
+          totalPlayTimeRef.current += timeSinceLastUpdate;
+          lastUpdateTimeRef.current = now;
+        }
 
-        // 每30秒或进度变化>=5%时自动保存
         if (now - lastSaveTimeRef.current > 30000 || Math.abs(newProgress - userProgress) >= 5) {
           const durationToSave = totalPlayTimeRef.current;
           totalPlayTimeRef.current = 0;
@@ -261,7 +258,7 @@ if (timeSinceLastUpdate > 0) {
 
         return newTime;
       });
-    }, 1000); // 仍然每秒检查一次，但计算基于实际时间差
+    }, 1000);
 
     return () => {
       if (timerRef.current) {
@@ -279,7 +276,7 @@ if (timeSinceLastUpdate > 0) {
       clearInterval(timerRef.current);
     }
   };
-}, [isPlaying, materialData, userProgress, id]); // 添加 currentTime 依赖
+}, [isPlaying, materialData, userProgress, id]);
 useEffect(() => {
   currentTimeRef.current = currentTime;
 }, [currentTime]);
@@ -314,35 +311,36 @@ useEffect(() => {
   };
 
   // 更新进度（拖动或点击）
-  const updateProgress = (clientX: number) => {
-    if (!materialData || !progressBarRef.current) return;
+const updateProgress = (clientX: number) => {
+  if (!materialData || !progressBarRef.current) return;
 
-    const rect = progressBarRef.current.getBoundingClientRect();
-    const clickX = clientX - rect.left;
-    const width = rect.width;
-    const clickPercent = Math.max(0, Math.min(1, clickX / width));
+  const rect = progressBarRef.current.getBoundingClientRect();
+  const clickX = clientX - rect.left;
+  const width = rect.width;
+  const clickPercent = Math.max(0, Math.min(1, clickX / width));
 
-    const totalSeconds = durationToSeconds(materialData.duration);
-    const newTime = totalSeconds * clickPercent;
-    const newProgress = calculateProgress(newTime, totalSeconds);
+  const totalSeconds = durationToSeconds(materialData.duration);
+  const newTime = totalSeconds * clickPercent;
+  const newProgress = calculateProgress(newTime, totalSeconds);
 
-    // 更新状态和 ref
-    setCurrentTime(newTime);
-    setProgress(newProgress);
-    currentProgressRef.current = newProgress;
+  // ✅ 立即更新所有状态和 ref
+  setCurrentTime(newTime);
+  setProgress(newProgress);
+  currentProgressRef.current = newProgress;
+  currentTimeRef.current = newTime; // ✅ 添加这行，同步时间 ref
 
-    // 同步音频
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime;
-    }
+  // 同步音频
+  if (audioRef.current) {
+    audioRef.current.currentTime = newTime;
+  }
 
-    // 如果不在拖动中，立即保存
-    if (!isDraggingRef.current) {
-      saveStudyProgress(newProgress, 0).then(() => {
-        setUserProgress(newProgress);
-      });
-    }
-  };
+  // 如果不在拖动中，立即保存
+  if (!isDraggingRef.current) {
+    saveStudyProgress(newProgress, 0).then(() => {
+      setUserProgress(newProgress);
+    });
+  }
+};
 
   // 拖动处理
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -357,15 +355,18 @@ useEffect(() => {
     }
   };
 
-  const handleMouseUp = () => {
-    isDraggingRef.current = false;
-    setIsDragging(false);
+ const handleMouseUp = () => {
+  isDraggingRef.current = false;
+  setIsDragging(false);
 
-    // 拖动结束时保存进度
-    saveStudyProgress(currentProgressRef.current, 0).then(() => {
-      setUserProgress(currentProgressRef.current);
-    });
-  };
+  // ✅ 重置定时器基准时间，避免时间跳跃
+  lastUpdateTimeRef.current = Date.now();
+
+  // 拖动结束时保存进度
+  saveStudyProgress(currentProgressRef.current, 0).then(() => {
+    setUserProgress(currentProgressRef.current);
+  });
+};
 
   useEffect(() => {
     if (isDragging) {
