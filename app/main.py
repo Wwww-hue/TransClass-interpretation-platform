@@ -21,8 +21,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://*.transclass.top",  # ✅ 允许所有子域名
+        "https://www.transclass.top",  # ✅ 允许所有子域名
         "https://transclass.top",    # ✅ 允许根域名
+
         "https://trans-class-interpretation-platform-ux2p-*.vercel.app",
         "https://trans-class-interpretation-platform-two.vercel.app",
         "http://localhost:3000",
