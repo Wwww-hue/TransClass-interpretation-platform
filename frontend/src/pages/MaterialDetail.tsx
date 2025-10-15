@@ -498,18 +498,29 @@ useEffect(() => {
                 </Col>
               </Row>
               <audio
-                ref={audioRef}
-                src={getAudioUrl(materialData?.content_url)}
-                preload="auto"
+                  ref={audioRef}
+                  src={getAudioUrl(materialData?.content_url)}
+                  preload="auto"
+                  onLoadedMetadata={() => {
+                    // ✅ 音频元数据加载完成后，设置正确的播放位置
+                    if (audioRef.current && currentTimeRef.current > 0) {
+                      audioRef.current.currentTime = currentTimeRef.current;
+                      console.log(`🎵 音频已加载，跳转到: ${currentTimeRef.current}秒`);
+                    }
+                  }}
               />
             </Card>
 
             <Tabs defaultActiveKey="transcript">
               <TabPane tab="简介" key="introduction">
-                <div style={{padding: '16px', background: '#f8f9fa', borderRadius: '6px'}}>{materialData.introduction || '暂无简介'}</div>
+                <div style={{
+                  padding: '16px',
+                  background: '#f8f9fa',
+                  borderRadius: '6px'
+                }}>{materialData.introduction || '暂无简介'}</div>
               </TabPane>
               <TabPane tab="术语" key="terms">
-                <div style={{padding: '16px'}}>
+              <div style={{padding: '16px'}}>
                   {materialData.terms && materialData.terms.length > 0 ? (
                     materialData.terms.map((item, index) => (
                       <div key={index} style={{display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0'}}>
