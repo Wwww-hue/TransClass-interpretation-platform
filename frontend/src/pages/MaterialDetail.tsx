@@ -180,6 +180,7 @@ const handleBack = () => {
         const savedTime = (savedProgress / 100) * totalSeconds;
         setCurrentTime(savedTime);
         setProgress(savedProgress);
+        currentTimeRef.current = savedTime; // ✅ 添加这行！！！
 
         console.log(`🔍 恢复学习进度: ${savedProgress}%, 时间位置: ${savedTime}秒`);
       } catch (error) {
