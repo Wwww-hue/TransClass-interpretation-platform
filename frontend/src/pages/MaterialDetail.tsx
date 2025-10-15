@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, Row, Col, Button, Tabs, Tag, Rate, message, Spin } from 'antd';
-import { PlayCircleOutlined, PauseCircleOutlined, LeftOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Button, Tabs, Tag, Rate, message, Spin, Alert } from 'antd';
+import { PlayCircleOutlined, PauseCircleOutlined, LeftOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-const API_BASE_URL = import.meta.env.VITE_API_URL
+
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 // 定义接口类型
 interface Term {
   term: string;
@@ -32,6 +34,7 @@ interface PracticeMaterial {
   created_at: string;
   updated_at: string;
 }
+
 // 学习进度接口
 interface StudyRecordProgress {
   material_id: number;
@@ -51,6 +54,12 @@ const MaterialDetail: React.FC = () => {
   const [materialData, setMaterialData] = useState<PracticeMaterial | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [userProgress, setUserProgress] = useState(0);
+
+  // 新增状态：音频加载管理
+  const [audioLoaded, setAudioLoaded] = useState(false);
+  const [audioLoadFailed, setAudioLoadFailed] = useState(false);
+  const [audioLoading, setAudioLoading] = useState(false);
+
   const lastUpdateTimeRef = useRef<number>(0);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -59,30 +68,30 @@ const MaterialDetail: React.FC = () => {
 
   // 统一的进度跟踪 ref
   const currentProgressRef = useRef(0);
-
   const lastSaveTimeRef = useRef<number>(0);
   const totalPlayTimeRef = useRef(0);
   const isDraggingRef = useRef(false);
-const handleBack = () => {
-  const fromHome = sessionStorage.getItem('fromHome');
-  const fromRecent = sessionStorage.getItem('fromRecent');
-  const fromProfile = sessionStorage.getItem('fromProfile');
-  // 清除所有标记
-  sessionStorage.removeItem('fromHome');
-  sessionStorage.removeItem('fromRecent');
-  sessionStorage.removeItem('fromProfile');
 
-  // 优先级：Profile > Home > Recent > 默认
-  if (fromProfile) {
-    navigate('/profile');
-  } else if (fromHome) {
-    navigate('/');
-  } else if (fromRecent) {
-    navigate('/recent');
-  } else {
-    navigate('/practice');
-  }
-};
+  const handleBack = () => {
+    const fromHome = sessionStorage.getItem('fromHome');
+    const fromRecent = sessionStorage.getItem('fromRecent');
+    const fromProfile = sessionStorage.getItem('fromProfile');
+
+    sessionStorage.removeItem('fromHome');
+    sessionStorage.removeItem('fromRecent');
+    sessionStorage.removeItem('fromProfile');
+
+    if (fromProfile) {
+      navigate('/profile');
+    } else if (fromHome) {
+      navigate('/');
+    } else if (fromRecent) {
+      navigate('/recent');
+    } else {
+      navigate('/practice');
+    }
+  };
+
   const getAudioUrl = (contentUrl: string | undefined) => {
     if (!contentUrl) return '';
     if (contentUrl.startsWith('http')) return contentUrl;
@@ -180,7 +189,7 @@ const handleBack = () => {
         const savedTime = (savedProgress / 100) * totalSeconds;
         setCurrentTime(savedTime);
         setProgress(savedProgress);
-        currentTimeRef.current = savedTime; // ✅ 添加这行！！！
+        currentTimeRef.current = savedTime;
 
         console.log(`🔍 恢复学习进度: ${savedProgress}%, 时间位置: ${savedTime}秒`);
       } catch (error) {
@@ -194,104 +203,137 @@ const handleBack = () => {
     loadMaterialDetail();
   }, [id]);
 
-  // 播放定时器 - 这是唯一的进度跟踪来源
-// 1. 修改定时器，需要重新获取 startCurrentTime
-useEffect(() => {
-  if (isPlaying && materialData && !isDraggingRef.current) {
-    const totalSeconds = durationToSeconds(materialData.duration);
-    const startTime = Date.now();
+  // 当材料数据加载完成后，开始加载音频
+  useEffect(() => {
+    if (materialData && !loading) {
+      setAudioLoading(true);
+      // 音频加载将在audio元素的onCanPlayThrough中处理
+    }
+  }, [materialData, loading]);
 
-    lastUpdateTimeRef.current = startTime;
+  // 播放定时器
+  useEffect(() => {
+    if (isPlaying && materialData && !isDraggingRef.current) {
+      const totalSeconds = durationToSeconds(materialData.duration);
+      const startTime = Date.now();
 
-    timerRef.current = window.setInterval(() => {
-      // ✅ 如果正在拖动，跳过本次更新
-      if (isDraggingRef.current) {
-        return;
-      }
+      lastUpdateTimeRef.current = startTime;
 
-      const now = Date.now();
-      
-
-      // ✅ 关键修改：直接使用 currentTimeRef 而不是闭包的 startCurrentTime
-      const newTime = Math.min(currentTimeRef.current + 1, totalSeconds);
-
-      if (newTime >= totalSeconds) {
-        setIsPlaying(false);
-        if (audioRef.current) {
-          audioRef.current.pause();
+      timerRef.current = window.setInterval(() => {
+        if (isDraggingRef.current) {
+          return;
         }
 
-        const finalDuration = totalPlayTimeRef.current;
-        totalPlayTimeRef.current = 0;
-        saveStudyProgress(100, finalDuration);
+        const now = Date.now();
+        const newTime = Math.min(currentTimeRef.current + 1, totalSeconds);
 
+        if (newTime >= totalSeconds) {
+          setIsPlaying(false);
+          if (audioRef.current) {
+            audioRef.current.pause();
+          }
+
+          const finalDuration = totalPlayTimeRef.current;
+          totalPlayTimeRef.current = 0;
+          saveStudyProgress(100, finalDuration);
+
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+          }
+
+          setCurrentTime(totalSeconds);
+          setProgress(100);
+          currentTimeRef.current = totalSeconds;
+          currentProgressRef.current = 100;
+          return;
+        }
+
+        const newProgress = calculateProgress(newTime, totalSeconds);
+
+        setCurrentTime(newTime);
+        setProgress(newProgress);
+        currentProgressRef.current = newProgress;
+        currentTimeRef.current = newTime;
+
+        const timeSinceLastUpdate = Math.floor((now - lastUpdateTimeRef.current) / 1000);
+        if (timeSinceLastUpdate > 0) {
+          totalPlayTimeRef.current += timeSinceLastUpdate;
+          lastUpdateTimeRef.current = now;
+        }
+
+        if (now - lastSaveTimeRef.current > 30000 || Math.abs(newProgress - userProgress) >= 5) {
+          const durationToSave = totalPlayTimeRef.current;
+          totalPlayTimeRef.current = 0;
+
+          saveStudyProgress(newProgress, durationToSave)
+            .then(() => {
+              setUserProgress(newProgress);
+              lastSaveTimeRef.current = now;
+            })
+            .catch(error => {
+              console.error('保存失败:', error);
+              totalPlayTimeRef.current += durationToSave;
+            });
+        }
+      }, 1000);
+
+      return () => {
         if (timerRef.current) {
           clearInterval(timerRef.current);
         }
-
-        setCurrentTime(totalSeconds);
-        setProgress(100);
-        currentTimeRef.current = totalSeconds;
-        currentProgressRef.current = 100;
-        return;
+      };
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
       }
-
-      const newProgress = calculateProgress(newTime, totalSeconds);
-
-      setCurrentTime(newTime);
-      setProgress(newProgress);
-      currentProgressRef.current = newProgress;
-      currentTimeRef.current = newTime;
-
-      const timeSinceLastUpdate = Math.floor((now - lastUpdateTimeRef.current) / 1000);
-      if (timeSinceLastUpdate > 0) {
-        totalPlayTimeRef.current += timeSinceLastUpdate;
-        lastUpdateTimeRef.current = now;
-      }
-
-      if (now - lastSaveTimeRef.current > 30000 || Math.abs(newProgress - userProgress) >= 5) {
-        const durationToSave = totalPlayTimeRef.current;
-        totalPlayTimeRef.current = 0;
-
-        saveStudyProgress(newProgress, durationToSave)
-          .then(() => {
-            setUserProgress(newProgress);
-            lastSaveTimeRef.current = now;
-          })
-          .catch(error => {
-            console.error('保存失败:', error);
-            totalPlayTimeRef.current += durationToSave;
-          });
-      }
-    }, 1000);
+    }
 
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
-  } else {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-  }
+  }, [isPlaying, materialData, userProgress, id, isDragging]);
 
-  return () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
+  useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
+
+  // 音频事件处理
+  const handleAudioCanPlay = () => {
+    setAudioLoaded(true);
+    setAudioLoading(false);
+    setAudioLoadFailed(false);
+    console.log('✅ 音频可以播放了');
   };
-}, [isPlaying, materialData, userProgress, id, isDragging]); // ✅ 添加 isDragging 依赖
 
-useEffect(() => {
-  currentTimeRef.current = currentTime;
-}, [currentTime]);
+  const handleAudioError = () => {
+    setAudioLoadFailed(true);
+    setAudioLoaded(true); // 即使失败也显示页面
+    setAudioLoading(false);
+    console.error('❌ 音频加载失败');
+  };
+
+  const handleAudioLoadStart = () => {
+    setAudioLoading(true);
+    console.log('🔄 开始加载音频...');
+  };
 
   // 播放/暂停
   const handlePlayPause = () => {
     if (!materialData) return;
 
     if (!isPlaying) {
+      if (audioLoadFailed) {
+        message.error('音频加载失败，无法播放');
+        return;
+      }
+
+      if (!audioLoaded) {
+        message.warning('音频还在加载中，请稍候...');
+        return;
+      }
+
       audioRef.current?.play();
       setIsPlaying(true);
       message.info('开始播放');
@@ -299,7 +341,6 @@ useEffect(() => {
       audioRef.current?.pause();
       setIsPlaying(false);
 
-      // 暂停时保存进度
       if (totalPlayTimeRef.current > 0) {
         const durationToSave = totalPlayTimeRef.current;
         totalPlayTimeRef.current = 0;
@@ -317,36 +358,33 @@ useEffect(() => {
   };
 
   // 更新进度（拖动或点击）
-const updateProgress = (clientX: number) => {
-  if (!materialData || !progressBarRef.current) return;
+  const updateProgress = (clientX: number) => {
+    if (!materialData || !progressBarRef.current) return;
 
-  const rect = progressBarRef.current.getBoundingClientRect();
-  const clickX = clientX - rect.left;
-  const width = rect.width;
-  const clickPercent = Math.max(0, Math.min(1, clickX / width));
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const clickX = clientX - rect.left;
+    const width = rect.width;
+    const clickPercent = Math.max(0, Math.min(1, clickX / width));
 
-  const totalSeconds = durationToSeconds(materialData.duration);
-  const newTime = totalSeconds * clickPercent;
-  const newProgress = calculateProgress(newTime, totalSeconds);
+    const totalSeconds = durationToSeconds(materialData.duration);
+    const newTime = totalSeconds * clickPercent;
+    const newProgress = calculateProgress(newTime, totalSeconds);
 
-  // ✅ 立即更新所有状态和 ref
-  setCurrentTime(newTime);
-  setProgress(newProgress);
-  currentProgressRef.current = newProgress;
-  currentTimeRef.current = newTime; // ✅ 添加这行，同步时间 ref
+    setCurrentTime(newTime);
+    setProgress(newProgress);
+    currentProgressRef.current = newProgress;
+    currentTimeRef.current = newTime;
 
-  // 同步音频
-  if (audioRef.current) {
-    audioRef.current.currentTime = newTime;
-  }
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime;
+    }
 
-  // 如果不在拖动中，立即保存
-  if (!isDraggingRef.current) {
-    saveStudyProgress(newProgress, 0).then(() => {
-      setUserProgress(newProgress);
-    });
-  }
-};
+    if (!isDraggingRef.current) {
+      saveStudyProgress(newProgress, 0).then(() => {
+        setUserProgress(newProgress);
+      });
+    }
+  };
 
   // 拖动处理
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -361,18 +399,15 @@ const updateProgress = (clientX: number) => {
     }
   };
 
- const handleMouseUp = () => {
-  isDraggingRef.current = false;
-  setIsDragging(false);
+  const handleMouseUp = () => {
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    lastUpdateTimeRef.current = Date.now();
 
-  // ✅ 重置定时器基准时间，避免时间跳跃
-  lastUpdateTimeRef.current = Date.now();
-
-  // 拖动结束时保存进度
-  saveStudyProgress(currentProgressRef.current, 0).then(() => {
-    setUserProgress(currentProgressRef.current);
-  });
-};
+    saveStudyProgress(currentProgressRef.current, 0).then(() => {
+      setUserProgress(currentProgressRef.current);
+    });
+  };
 
   useEffect(() => {
     if (isDragging) {
@@ -402,10 +437,24 @@ const updateProgress = (clientX: number) => {
     };
   }, [progress]);
 
+  // 加载状态渲染
   if (loading) {
     return (
       <div style={{ padding: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-        <Spin size="large" />
+        <Spin size="large" tip="加载材料内容..." />
+      </div>
+    );
+  }
+
+  // 音频加载中状态
+  if (!audioLoaded && !audioLoadFailed && audioLoading) {
+    return (
+      <div style={{ padding: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px', flexDirection: 'column' }}>
+        <Spin size="large" tip="优化音频播放体验..." />
+        <div style={{ marginTop: '16px', color: '#666', textAlign: 'center' }}>
+          <div>正在预加载音频文件</div>
+          <div style={{ fontSize: '14px', marginTop: '8px' }}>材料: {materialData?.title}</div>
+        </div>
       </div>
     );
   }
@@ -414,8 +463,8 @@ const updateProgress = (clientX: number) => {
     return (
       <div style={{ padding: '24px' }}>
         <Button type="text" icon={<LeftOutlined />} onClick={handleBack} style={{ marginBottom: '16px' }}>
-  返回
-</Button>
+          返回
+        </Button>
         <Card>
           <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
             材料不存在或已被删除
@@ -432,8 +481,20 @@ const updateProgress = (clientX: number) => {
   return (
     <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
       <Button type="text" icon={<LeftOutlined />} onClick={handleBack} style={{ marginBottom: '16px' }}>
-  返回
-</Button>
+        返回
+      </Button>
+
+      {/* 音频加载失败提示 */}
+      {audioLoadFailed && (
+        <Alert
+          message="音频加载失败"
+          description="音频文件可能暂时不可用，您仍然可以查看文本内容和其他信息。"
+          type="warning"
+          showIcon
+          icon={<ExclamationCircleOutlined />}
+          style={{ marginBottom: '16px' }}
+        />
+      )}
 
       <Row gutter={[24, 24]}>
         <Col xs={24}>
@@ -444,6 +505,7 @@ const updateProgress = (clientX: number) => {
               <div style={{ fontSize: '14px', color: '#999' }}>
                 来源：{materialData.source || '未知'}  {materialData.date}
                 <span style={{ marginLeft: '16px', color: '#1890ff' }}>当前进度: {progress}%</span>
+                {audioLoadFailed && <span style={{ marginLeft: '16px', color: '#faad14' }}>⚠️ 音频不可用</span>}
               </div>
             </div>
 
@@ -464,6 +526,7 @@ const updateProgress = (clientX: number) => {
                     icon={isPlaying ? <PauseCircleOutlined style={{fontSize: '24px'}}/> : <PlayCircleOutlined style={{fontSize: '24px'}}/>}
                     onClick={handlePlayPause}
                     style={{ padding: '8px', width: '48px', height: '48px', borderRadius: '50%' }}
+                    disabled={audioLoadFailed}
                   />
                 </Col>
                 <Col flex="auto">
@@ -479,11 +542,12 @@ const updateProgress = (clientX: number) => {
                       background: '#f0f0f0',
                       borderRadius: '3px',
                       position: 'relative',
-                      cursor: 'pointer',
+                      cursor: audioLoadFailed ? 'not-allowed' : 'pointer',
+                      opacity: audioLoadFailed ? 0.6 : 1
                     }}
                     onClick={handleProgressClick}
                   >
-                    <div style={{ width: `${progress}%`, height: '100%', background: '#1890ff', borderRadius: '3px', position: 'absolute', top: 0, left: 0 }}/>
+                    <div style={{ width: `${progress}%`, height: '100%', background: audioLoadFailed ? '#d9d9d9' : '#1890ff', borderRadius: '3px', position: 'absolute', top: 0, left: 0 }}/>
                     <div
                       style={{
                         position: 'absolute',
@@ -493,28 +557,33 @@ const updateProgress = (clientX: number) => {
                         width: '16px',
                         height: '16px',
                         borderRadius: '50%',
-                        background: '#1890ff',
+                        background: audioLoadFailed ? '#d9d9d9' : '#1890ff',
                         border: '2px solid #fff',
                         boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                        cursor: isDragging ? 'grabbing' : 'grab',
+                        cursor: isDragging ? 'grabbing' : (audioLoadFailed ? 'not-allowed' : 'grab'),
                         zIndex: 10
                       }}
-                      onMouseDown={handleMouseDown}
+                      onMouseDown={audioLoadFailed ? undefined : handleMouseDown}
                     />
                   </div>
                 </Col>
               </Row>
+
+              {/* 音频元素 - 隐藏但功能完整 */}
               <audio
-                  ref={audioRef}
-                  src={getAudioUrl(materialData?.content_url)}
-                  preload="auto"
-                  onLoadedMetadata={() => {
-                    // ✅ 音频元数据加载完成后，设置正确的播放位置
-                    if (audioRef.current && currentTimeRef.current > 0) {
-                      audioRef.current.currentTime = currentTimeRef.current;
-                      console.log(`🎵 音频已加载，跳转到: ${currentTimeRef.current}秒`);
-                    }
-                  }}
+                ref={audioRef}
+                src={getAudioUrl(materialData?.content_url)}
+                preload="auto"
+                onCanPlayThrough={handleAudioCanPlay}
+                onError={handleAudioError}
+                onLoadStart={handleAudioLoadStart}
+                onLoadedMetadata={() => {
+                  if (audioRef.current && currentTimeRef.current > 0) {
+                    audioRef.current.currentTime = currentTimeRef.current;
+                    console.log(`🎵 音频已加载，跳转到: ${currentTimeRef.current}秒`);
+                  }
+                }}
+                style={{ display: 'none' }}
               />
             </Card>
 
@@ -527,7 +596,7 @@ const updateProgress = (clientX: number) => {
                 }}>{materialData.introduction || '暂无简介'}</div>
               </TabPane>
               <TabPane tab="术语" key="terms">
-              <div style={{padding: '16px'}}>
+                <div style={{padding: '16px'}}>
                   {materialData.terms && materialData.terms.length > 0 ? (
                     materialData.terms.map((item, index) => (
                       <div key={index} style={{display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0'}}>
