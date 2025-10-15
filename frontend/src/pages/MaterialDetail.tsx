@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, Row, Col, Button, Tabs, Tag, Rate, message, Spin, Alert } from 'antd';
-import { PlayCircleOutlined, PauseCircleOutlined, LeftOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Button, Tabs, Tag, Rate, message, Spin } from 'antd';
+import { PlayCircleOutlined, PauseCircleOutlined, LeftOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -55,10 +55,7 @@ const MaterialDetail: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [userProgress, setUserProgress] = useState(0);
 
-  // 新增状态：音频加载管理
-  const [audioLoaded, setAudioLoaded] = useState(false);
-  const [audioLoadFailed, setAudioLoadFailed] = useState(false);
-  const [audioLoading, setAudioLoading] = useState(false);
+
 
   const lastUpdateTimeRef = useRef<number>(0);
   const progressBarRef = useRef<HTMLDivElement>(null);
@@ -122,8 +119,6 @@ const MaterialDetail: React.FC = () => {
   // 保存学习进度
   const saveStudyProgress = async (progressVal: number, playDuration: number = 0) => {
     try {
-      console.log(`💾 保存进度: ${progressVal}%, 播放时长: ${playDuration}秒`);
-
       const response = await fetch(`${API_BASE_URL}/study-records/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -136,10 +131,7 @@ const MaterialDetail: React.FC = () => {
       });
 
       if (!response.ok) throw new Error('保存学习进度失败');
-
-      const result = await response.json();
-      console.log(`✅ 学习进度已保存: ${progressVal}%`);
-      return result;
+      return await response.json();
     } catch (error) {
       console.error('保存学习进度失败:', error);
       throw error;
@@ -190,8 +182,6 @@ const MaterialDetail: React.FC = () => {
         setCurrentTime(savedTime);
         setProgress(savedProgress);
         currentTimeRef.current = savedTime;
-
-        console.log(`🔍 恢复学习进度: ${savedProgress}%, 时间位置: ${savedTime}秒`);
       } catch (error) {
         console.error('加载材料详情失败:', error);
         message.error('加载材料详情失败');
@@ -203,21 +193,12 @@ const MaterialDetail: React.FC = () => {
     loadMaterialDetail();
   }, [id]);
 
-  // 当材料数据加载完成后，开始加载音频
-  useEffect(() => {
-    if (materialData && !loading) {
-      setAudioLoading(true);
-      // 音频加载将在audio元素的onCanPlayThrough中处理
-    }
-  }, [materialData, loading]);
-
   // 播放定时器
   useEffect(() => {
     if (isPlaying && materialData && !isDraggingRef.current) {
       const totalSeconds = durationToSeconds(materialData.duration);
-      const startTime = Date.now();
 
-      lastUpdateTimeRef.current = startTime;
+      lastUpdateTimeRef.current = Date.now();
 
       timerRef.current = window.setInterval(() => {
         if (isDraggingRef.current) {
@@ -299,44 +280,25 @@ const MaterialDetail: React.FC = () => {
     currentTimeRef.current = currentTime;
   }, [currentTime]);
 
-  // 音频事件处理
-  const handleAudioCanPlay = () => {
-    setAudioLoaded(true);
-    setAudioLoading(false);
-    setAudioLoadFailed(false);
-    console.log('✅ 音频可以播放了');
-  };
-
-  const handleAudioError = () => {
-    setAudioLoadFailed(true);
-    setAudioLoaded(true); // 即使失败也显示页面
-    setAudioLoading(false);
-    console.error('❌ 音频加载失败');
-  };
-
-  const handleAudioLoadStart = () => {
-    setAudioLoading(true);
-    console.log('🔄 开始加载音频...');
-  };
-
-  // 播放/暂停
+  // 播放/暂停 - 简化逻辑
   const handlePlayPause = () => {
     if (!materialData) return;
 
     if (!isPlaying) {
-      if (audioLoadFailed) {
-        message.error('音频加载失败，无法播放');
-        return;
-      }
+      // 直接尝试播放，不检查准备状态
+      const playPromise = audioRef.current?.play();
 
-      if (!audioLoaded) {
-        message.warning('音频还在加载中，请稍候...');
-        return;
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+            message.info('开始播放');
+          })
+          .catch(error => {
+            console.error('播放失败:', error);
+            message.warning('音频加载中，请稍后重试');
+          });
       }
-
-      audioRef.current?.play();
-      setIsPlaying(true);
-      message.info('开始播放');
     } else {
       audioRef.current?.pause();
       setIsPlaying(false);
@@ -437,24 +399,11 @@ const MaterialDetail: React.FC = () => {
     };
   }, [progress]);
 
-  // 加载状态渲染
+  // 简化加载状态：只检查材料内容
   if (loading) {
     return (
       <div style={{ padding: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <Spin size="large" tip="加载材料内容..." />
-      </div>
-    );
-  }
-
-  // 音频加载中状态
-  if (!audioLoaded && !audioLoadFailed && audioLoading) {
-    return (
-      <div style={{ padding: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px', flexDirection: 'column' }}>
-        <Spin size="large" tip="优化音频播放体验..." />
-        <div style={{ marginTop: '16px', color: '#666', textAlign: 'center' }}>
-          <div>正在预加载音频文件</div>
-          <div style={{ fontSize: '14px', marginTop: '8px' }}>材料: {materialData?.title}</div>
-        </div>
       </div>
     );
   }
@@ -484,18 +433,6 @@ const MaterialDetail: React.FC = () => {
         返回
       </Button>
 
-      {/* 音频加载失败提示 */}
-      {audioLoadFailed && (
-        <Alert
-          message="音频加载失败"
-          description="音频文件可能暂时不可用，您仍然可以查看文本内容和其他信息。"
-          type="warning"
-          showIcon
-          icon={<ExclamationCircleOutlined />}
-          style={{ marginBottom: '16px' }}
-        />
-      )}
-
       <Row gutter={[24, 24]}>
         <Col xs={24}>
           <Card>
@@ -505,7 +442,6 @@ const MaterialDetail: React.FC = () => {
               <div style={{ fontSize: '14px', color: '#999' }}>
                 来源：{materialData.source || '未知'}  {materialData.date}
                 <span style={{ marginLeft: '16px', color: '#1890ff' }}>当前进度: {progress}%</span>
-                {audioLoadFailed && <span style={{ marginLeft: '16px', color: '#faad14' }}>⚠️ 音频不可用</span>}
               </div>
             </div>
 
@@ -526,7 +462,6 @@ const MaterialDetail: React.FC = () => {
                     icon={isPlaying ? <PauseCircleOutlined style={{fontSize: '24px'}}/> : <PlayCircleOutlined style={{fontSize: '24px'}}/>}
                     onClick={handlePlayPause}
                     style={{ padding: '8px', width: '48px', height: '48px', borderRadius: '50%' }}
-                    disabled={audioLoadFailed}
                   />
                 </Col>
                 <Col flex="auto">
@@ -542,12 +477,11 @@ const MaterialDetail: React.FC = () => {
                       background: '#f0f0f0',
                       borderRadius: '3px',
                       position: 'relative',
-                      cursor: audioLoadFailed ? 'not-allowed' : 'pointer',
-                      opacity: audioLoadFailed ? 0.6 : 1
+                      cursor: 'pointer',
                     }}
                     onClick={handleProgressClick}
                   >
-                    <div style={{ width: `${progress}%`, height: '100%', background: audioLoadFailed ? '#d9d9d9' : '#1890ff', borderRadius: '3px', position: 'absolute', top: 0, left: 0 }}/>
+                    <div style={{ width: `${progress}%`, height: '100%', background: '#1890ff', borderRadius: '3px', position: 'absolute', top: 0, left: 0 }}/>
                     <div
                       style={{
                         position: 'absolute',
@@ -557,31 +491,31 @@ const MaterialDetail: React.FC = () => {
                         width: '16px',
                         height: '16px',
                         borderRadius: '50%',
-                        background: audioLoadFailed ? '#d9d9d9' : '#1890ff',
+                        background: '#1890ff',
                         border: '2px solid #fff',
                         boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                        cursor: isDragging ? 'grabbing' : (audioLoadFailed ? 'not-allowed' : 'grab'),
+                        cursor: isDragging ? 'grabbing' : 'grab',
                         zIndex: 10
                       }}
-                      onMouseDown={audioLoadFailed ? undefined : handleMouseDown}
+                      onMouseDown={handleMouseDown}
                     />
                   </div>
                 </Col>
               </Row>
 
-              {/* 音频元素 - 隐藏但功能完整 */}
+              {/* 音频元素 - 完全后台加载，不阻塞界面 */}
               <audio
                 ref={audioRef}
                 src={getAudioUrl(materialData?.content_url)}
                 preload="auto"
-                onCanPlayThrough={handleAudioCanPlay}
-                onError={handleAudioError}
-                onLoadStart={handleAudioLoadStart}
                 onLoadedMetadata={() => {
                   if (audioRef.current && currentTimeRef.current > 0) {
                     audioRef.current.currentTime = currentTimeRef.current;
-                    console.log(`🎵 音频已加载，跳转到: ${currentTimeRef.current}秒`);
                   }
+
+                }}
+                onError={() => {
+                  console.error('音频加载失败');
                 }}
                 style={{ display: 'none' }}
               />
