@@ -195,70 +195,74 @@ const handleBack = () => {
   }, [id]);
 
   // 播放定时器 - 这是唯一的进度跟踪来源
+// 1. 修改定时器，需要重新获取 startCurrentTime
 useEffect(() => {
-  if (isPlaying && materialData && !isDraggingRef.current) { // ✅ 已经有这个检查了
+  if (isPlaying && materialData && !isDraggingRef.current) {
     const totalSeconds = durationToSeconds(materialData.duration);
     const startTime = Date.now();
-    const startCurrentTime = currentTimeRef.current;
 
     lastUpdateTimeRef.current = startTime;
 
     timerRef.current = window.setInterval(() => {
-      // ✅ 关键：如果正在拖动，跳过本次更新
+      // ✅ 如果正在拖动，跳过本次更新
       if (isDraggingRef.current) {
         return;
       }
 
       const now = Date.now();
-      const elapsedSeconds = Math.floor((now - startTime) / 1000);
+      
 
-      setCurrentTime(() => {
-        const newTime = Math.min(startCurrentTime + elapsedSeconds, totalSeconds);
+      // ✅ 关键修改：直接使用 currentTimeRef 而不是闭包的 startCurrentTime
+      const newTime = Math.min(currentTimeRef.current + 1, totalSeconds);
 
-        if (newTime >= totalSeconds) {
-          setIsPlaying(false);
-          if (audioRef.current) {
-            audioRef.current.pause();
-          }
-
-          const finalDuration = totalPlayTimeRef.current;
-          totalPlayTimeRef.current = 0;
-          saveStudyProgress(100, finalDuration);
-
-          if (timerRef.current) {
-            clearInterval(timerRef.current);
-          }
-          return totalSeconds;
+      if (newTime >= totalSeconds) {
+        setIsPlaying(false);
+        if (audioRef.current) {
+          audioRef.current.pause();
         }
 
-        const newProgress = calculateProgress(newTime, totalSeconds);
-        setProgress(newProgress);
-        currentProgressRef.current = newProgress;
-        currentTimeRef.current = newTime;
+        const finalDuration = totalPlayTimeRef.current;
+        totalPlayTimeRef.current = 0;
+        saveStudyProgress(100, finalDuration);
 
-        const timeSinceLastUpdate = Math.floor((now - lastUpdateTimeRef.current) / 1000);
-        if (timeSinceLastUpdate > 0) {
-          totalPlayTimeRef.current += timeSinceLastUpdate;
-          lastUpdateTimeRef.current = now;
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
         }
 
-        if (now - lastSaveTimeRef.current > 30000 || Math.abs(newProgress - userProgress) >= 5) {
-          const durationToSave = totalPlayTimeRef.current;
-          totalPlayTimeRef.current = 0;
+        setCurrentTime(totalSeconds);
+        setProgress(100);
+        currentTimeRef.current = totalSeconds;
+        currentProgressRef.current = 100;
+        return;
+      }
 
-          saveStudyProgress(newProgress, durationToSave)
-            .then(() => {
-              setUserProgress(newProgress);
-              lastSaveTimeRef.current = now;
-            })
-            .catch(error => {
-              console.error('保存失败:', error);
-              totalPlayTimeRef.current += durationToSave;
-            });
-        }
+      const newProgress = calculateProgress(newTime, totalSeconds);
 
-        return newTime;
-      });
+      setCurrentTime(newTime);
+      setProgress(newProgress);
+      currentProgressRef.current = newProgress;
+      currentTimeRef.current = newTime;
+
+      const timeSinceLastUpdate = Math.floor((now - lastUpdateTimeRef.current) / 1000);
+      if (timeSinceLastUpdate > 0) {
+        totalPlayTimeRef.current += timeSinceLastUpdate;
+        lastUpdateTimeRef.current = now;
+      }
+
+      if (now - lastSaveTimeRef.current > 30000 || Math.abs(newProgress - userProgress) >= 5) {
+        const durationToSave = totalPlayTimeRef.current;
+        totalPlayTimeRef.current = 0;
+
+        saveStudyProgress(newProgress, durationToSave)
+          .then(() => {
+            setUserProgress(newProgress);
+            lastSaveTimeRef.current = now;
+          })
+          .catch(error => {
+            console.error('保存失败:', error);
+            totalPlayTimeRef.current += durationToSave;
+          });
+      }
     }, 1000);
 
     return () => {
@@ -277,7 +281,8 @@ useEffect(() => {
       clearInterval(timerRef.current);
     }
   };
-}, [isPlaying, materialData, userProgress, id]);
+}, [isPlaying, materialData, userProgress, id, isDragging]); // ✅ 添加 isDragging 依赖
+
 useEffect(() => {
   currentTimeRef.current = currentTime;
 }, [currentTime]);
